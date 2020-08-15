@@ -6,11 +6,21 @@ import Operation from './components/operation/Operation';
 class App extends React.Component {
 
   state = {
-    transactions: [],
+    transactions: JSON.parse(localStorage.getItem('calcMoney')) || [],
     description: '',
     amount: '',
+    resultIncome: 0,
+    resultExpenses: 0,
+    totalBalance: 0,
   }
 
+  componentWillMount() {
+    this.getTotalBalance();
+  }
+
+  componentDidUpdate() {
+    this.addStorage();
+  }
   addTransaction = add => {
 
     const transactions = [...this.state.transactions];
@@ -18,9 +28,9 @@ class App extends React.Component {
     const transaction = {
       id: `cmr${(+new Date()).toString(16)}`,
       description: this.state.description,
-      amount: this.state.amount,
+      amount: parseFloat(this.state.amount),
       add
-    }
+    };
 
     transactions.push(transaction);
 
@@ -28,7 +38,7 @@ class App extends React.Component {
       transactions,
       description: '',
       amount: '',
-    })
+    }, this.getTotalBalance);
   }
 
   addAmount = el => {
@@ -37,6 +47,37 @@ class App extends React.Component {
 
   addDescription = el => {
     this.setState({ description: el.target.value });
+  }
+
+  getIncome = () => this.state.transactions
+    .filter(item => item.add)
+    .reduce((acc, item) => item.amount + acc, 0);
+
+  getExpenses = () => this.state.transactions
+    .filter(item => !item.add)
+    .reduce((acc, item) => item.amount + acc, 0);
+
+
+  getTotalBalance() {
+    const resultIncome = this.getIncome();
+    const resultExpenses = this.getExpenses();
+
+    const totalBalance = resultIncome - resultExpenses;
+
+    this.setState({
+      resultIncome,
+      resultExpenses,
+      totalBalance,
+    })
+  };
+
+  addStorage() {
+    localStorage.setItem('calcMoney', JSON.stringify(this.state.transactions));
+  }
+
+  deleteTransaction = (key) => {
+    const transactions = this.state.transactions.filter(item => item.id !== key);
+    this.setState({ transactions }, this.getTotalBalance);
   }
 
   render() {
@@ -49,8 +90,15 @@ class App extends React.Component {
 
         <main>
           <div className="container">
-            <Total />
-            <History transactions={this.state.transactions} />
+            <Total
+              resultExpenses={this.state.resultExpenses}
+              resultIncome={this.state.resultIncome}
+              totalBalance={this.state.totalBalance}
+            />
+            <History
+              transactions={this.state.transactions}
+              deleteTransaction={this.deleteTransaction}
+            />
             <Operation
               addTransaction={this.addTransaction}
               addDescription={this.addDescription}
